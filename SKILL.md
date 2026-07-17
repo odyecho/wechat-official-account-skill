@@ -8,7 +8,7 @@ metadata:
   author: 42ailab
   title: 微信公众号文章阅读工具
   description_zh: 读取微信公众号文章内容。搜索公开文章和获取全文直接运行内置脚本；管理自己的公众号需配置 WECHAT_APPID 和 WECHAT_SECRET。
-  version: 1.0.3
+  version: 1.0.4
   license: MIT
 ---
 

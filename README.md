@@ -14,7 +14,7 @@
 
 ## 📦 安装
 
-推荐使用 42plugin 安装公开发布版：
+### 方式一：使用 42plugin（推荐）
 
 ```bash
 # Claude
@@ -31,12 +31,29 @@
 42plugin update --global --platform codex
 ```
 
-如需参与开发，请确保已安装 [uv](https://docs.astral.sh/uv/)，然后克隆仓库：
+### 方式二：从 GitHub 手动安装
+
+不使用 42plugin 时，可以克隆仓库并将同一份源码链接到 Claude 或 Codex。请先确保已安装
+[Git](https://git-scm.com/) 和 [uv](https://docs.astral.sh/uv/)：
 
 ```bash
 git clone https://github.com/odyecho/wechat-official-account-skill.git
 cd wechat-official-account-skill
 uv --version
+
+# 安装到 Claude
+mkdir -p ~/.claude/skills
+ln -s "$(pwd)" ~/.claude/skills/wechat-official-account
+
+# 安装到 Codex
+mkdir -p ~/.codex/skills
+ln -s "$(pwd)" ~/.codex/skills/wechat-official-account
+```
+
+如果只使用其中一个平台，只需执行对应的两条安装命令。手动安装后，可在仓库目录中更新：
+
+```bash
+git pull --ff-only
 ```
 
 ## 🚀 快速开始
