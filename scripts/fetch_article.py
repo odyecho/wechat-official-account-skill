@@ -2,7 +2,7 @@
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
-#   "httpx",
+#   "httpx[socks]",
 #   "beautifulsoup4",
 #   "lxml",
 # ]
@@ -17,12 +17,16 @@
     uv run fetch_article.py "https://mp.weixin.qq.com/s/xxx"
 """
 
-import sys
 import asyncio
+from datetime import datetime
+import html as html_lib
 import random
-import json
+import re
+import sys
+from zoneinfo import ZoneInfo
+
 import httpx
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 
 HEADERS = {
@@ -34,8 +38,13 @@ HEADERS = {
 
 
 async def fetch_article(article_url: str) -> dict:
-    if not article_url.startswith("https://mp.weixin.qq.com/s/"):
-        raise ValueError("无效的微信文章链接，必须以 https://mp.weixin.qq.com/s/ 开头")
+    if not (
+        article_url.startswith("https://mp.weixin.qq.com/s/")
+        or article_url.startswith("https://mp.weixin.qq.com/s?")
+    ):
+        raise ValueError(
+            "无效的微信文章链接，必须以 https://mp.weixin.qq.com/s/ 或 https://mp.weixin.qq.com/s? 开头"
+        )
 
     await asyncio.sleep(random.uniform(1, 3))
 
@@ -48,25 +57,64 @@ async def fetch_article(article_url: str) -> dict:
 def parse_article(html: str, url: str) -> dict:
     soup = BeautifulSoup(html, "lxml")
 
+    def meta_content(*selectors: str) -> str:
+        for selector in selectors:
+            elem = soup.select_one(selector)
+            if elem:
+                content = elem.get("content")
+                if isinstance(content, str):
+                    return content.strip()
+        return ""
+
+    def script_value(name: str) -> str:
+        pattern = rf'''(?:var\s+|window\.){re.escape(name)}\s*=\s*(?:htmlDecode\()?(?:"([^"]*)"|'([^']*)')'''
+        match = re.search(pattern, html, re.DOTALL)
+        if not match:
+            return ""
+        value = match.group(1) if match.group(1) is not None else match.group(2)
+        return html_lib.unescape(value.replace(r"\/", "/")).strip()
+
     title_elem = soup.find("h1", class_="rich_media_title")
-    title = title_elem.get_text(strip=True) if title_elem else "无标题"
+    title = (
+        title_elem.get_text(strip=True) if title_elem else ""
+    ) or meta_content('meta[property="og:title"]') or script_value("msg_title") or "无标题"
 
     author_elem = soup.find("a", class_="rich_media_meta_link")
-    author = author_elem.get_text(strip=True) if author_elem else "未知作者"
+    author = (
+        meta_content('meta[name="author"]', 'meta[property="og:article:author"]')
+        or (author_elem.get_text(strip=True) if author_elem else "")
+        or script_value("author")
+        or "未知作者"
+    )
+
+    account_elem = soup.select_one("#js_name")
+    account_name = (
+        account_elem.get_text(strip=True) if account_elem else ""
+    ) or script_value("nickname") or meta_content('meta[property="og:site_name"]')
 
     time_elem = soup.find("em", id="publish_time")
     publish_time = time_elem.get_text(strip=True) if time_elem else ""
+    publish_timestamp = script_value("ct") or script_value("oriCreateTime")
+    if not publish_time and publish_timestamp.isdigit():
+        publish_time = datetime.fromtimestamp(
+            int(publish_timestamp), tz=ZoneInfo("Asia/Shanghai")
+        ).strftime("%Y-%m-%d %H:%M")
+
+    description = meta_content(
+        'meta[property="og:description"]', 'meta[name="description"]'
+    )
+    cover_image = meta_content('meta[property="og:image"]')
 
     content_elem = soup.find("div", class_="rich_media_content")
-    if content_elem:
+    if isinstance(content_elem, Tag):
         for tag in content_elem(["script", "style"]):
             tag.decompose()
         content = content_elem.get_text(separator="\n", strip=True)
-        images = [
+        images = list(dict.fromkeys(
             img.get("data-src") or img.get("src")
             for img in content_elem.find_all("img")
             if img.get("data-src") or img.get("src")
-        ]
+        ))
     else:
         content = "无法获取文章内容（可能需要登录或内容已删除）"
         images = []
@@ -75,7 +123,13 @@ def parse_article(html: str, url: str) -> dict:
     return {
         "title": title,
         "author": author,
+        "account_name": account_name,
         "publish_time": publish_time,
+        "publish_timestamp": int(publish_timestamp) if publish_timestamp.isdigit() else None,
+        "description": description,
+        "cover_image": cover_image,
+        "appmsgid": script_value("appmsgid"),
+        "itemidx": script_value("itemidx"),
         "content": content,
         "url": url,
         "images": images,
@@ -94,7 +148,14 @@ async def main():
         article = await fetch_article(url)
         print(f"# {article['title']}\n")
         print(f"**作者**: {article['author']}")
-        print(f"**发布时间**: {article['publish_time']}")
+        print(f"**公众号**: {article['account_name'] or '未知公众号'}")
+        print(f"**发布时间**: {article['publish_time'] or '未知'}")
+        if article["appmsgid"]:
+            print(f"**文章 ID**: {article['appmsgid']}")
+        if article["description"]:
+            print(f"**摘要**: {article['description']}")
+        if article["cover_image"]:
+            print(f"**封面图**: {article['cover_image']}")
         print(f"**字数**: {article['word_count']}  |  **预估阅读**: {article['read_time_minutes']} 分钟\n")
         print("---\n")
         print(article["content"])

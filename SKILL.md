@@ -8,7 +8,7 @@ metadata:
   author: 42ailab
   title: 微信公众号文章阅读工具
   description_zh: 读取微信公众号文章内容。搜索公开文章和获取全文直接运行内置脚本；管理自己的公众号需配置 WECHAT_APPID 和 WECHAT_SECRET。
-  version: 1.0.1
+  version: 1.0.3
   license: MIT
 ---
 
@@ -68,7 +68,10 @@ uv run scripts/search_articles.py "大模型" "" 5
 uv run scripts/fetch_article.py "https://mp.weixin.qq.com/s/xxx"
 ```
 
-URL 来自搜索结果的 `链接` 字段，或用户直接提供。
+URL 来自搜索结果的 `链接` 字段，或用户直接提供。兼容 `/s/...` 短链接与
+`/s?...` 完整参数链接。
+
+**返回**：标题、作者、公众号、发布时间、文章 ID、摘要、封面图、正文和图片链接。
 
 **反爬注意**：失败后等待 10-30 分钟重试。
 
@@ -171,7 +174,7 @@ uv run scripts/wechat_api.py get_article BM_Vc7hXXX
 | 脚本 | 功能 | 依赖 |
 |------|------|------|
 | `scripts/search_articles.py` | 搜狗微信搜索 | httpx, beautifulsoup4, lxml |
-| `scripts/fetch_article.py` | 抓取公开文章全文（URL）| httpx, beautifulsoup4, lxml |
+| `scripts/fetch_article.py` | 抓取公开文章全文与元数据（URL）| httpx[socks], beautifulsoup4, lxml |
 | `scripts/wechat_api.py` | 官方 API：账号信息、文章列表、按 media_id 读全文 | httpx, beautifulsoup4, lxml |
 
 依赖通过 PEP 723 内联元数据声明，`uv run` 首次运行自动安装。

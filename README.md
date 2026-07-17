@@ -8,27 +8,35 @@
 ## ✨ 特性
 
 - 🔍 **搜索公开文章**：通过搜狗微信搜索公众号文章
-- 📄 **抓取全文**：获取任意微信文章的完整内容
+- 📄 **抓取全文与元数据**：获取正文、作者、公众号、发布时间、文章 ID、封面图和图片链接
 - 🏢 **官方 API**：管理自己的公众号文章（需配置凭据）
 - 🚀 **零配置运行**：使用 `uv run` 自动安装依赖，无需手动管理环境
 
 ## 📦 安装
 
-确保已安装 [uv](https://docs.astral.sh/uv/)：
+推荐使用 42plugin 安装公开发布版：
 
 ```bash
-# macOS/Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
+# Claude
+42plugin install odyssey/wechat-toolkit/wechat-official-account --global --platform claude
 
-# 验证安装
-which uv
+# Codex
+42plugin install odyssey/wechat-toolkit/wechat-official-account --global --platform codex
 ```
 
-克隆仓库：
+更新已安装版本：
+
+```bash
+42plugin update --global --platform claude
+42plugin update --global --platform codex
+```
+
+如需参与开发，请确保已安装 [uv](https://docs.astral.sh/uv/)，然后克隆仓库：
 
 ```bash
 git clone https://github.com/odyecho/wechat-official-account-skill.git
 cd wechat-official-account-skill
+uv --version
 ```
 
 ## 🚀 快速开始
@@ -64,8 +72,8 @@ cp .env.example .env
 source .env
 
 # 方式 2：直接导出
-export WECHAT_APPID=wx1234567890abcdef
-export WECHAT_SECRET=abcdef1234567890abcdef1234567890
+export WECHAT_APPID=wxYOUR_APPID_HERE
+export WECHAT_SECRET=your_appsecret_here
 ```
 
 **获取凭据**：登录 [微信公众平台](https://mp.weixin.qq.com) → 开发 → 基本配置
@@ -91,19 +99,11 @@ uv run scripts/wechat_api.py get_article BM_Vc7hXXX
 - 常见错误解决方案
 - API 配额说明
 
-## 🤝 作为 Claude Code Skill 使用
+## 🤝 开发与发布流程
 
-将此目录添加到 Claude Code 的 skills 目录：
-
-```bash
-ln -s $(pwd) ~/.claude/skills/wechat-official-account
-```
-
-然后在 Claude Code 中使用：
-
-```
-/wechat-official-account
-```
+本仓库是 Skill 的唯一开发源。完成修改和验证后，通过 42plugin 发布新版本，再由
+Claude 与 Codex 使用 `42plugin update` 获取更新。不要直接编辑
+`~/.42plugin/cache/` 中的托管文件。
 
 ## ⚠️ 注意事项
 
@@ -117,7 +117,7 @@ ln -s $(pwd) ~/.claude/skills/wechat-official-account
 | 脚本 | 功能 | 依赖 |
 |------|------|------|
 | `scripts/search_articles.py` | 搜狗微信搜索 | httpx, beautifulsoup4, lxml |
-| `scripts/fetch_article.py` | 抓取公开文章全文（URL）| httpx, beautifulsoup4, lxml |
+| `scripts/fetch_article.py` | 抓取公开文章全文与元数据（URL）| httpx[socks], beautifulsoup4, lxml |
 | `scripts/wechat_api.py` | 官方 API：账号信息、文章列表、按 media_id 读全文 | httpx, beautifulsoup4, lxml |
 
 依赖通过 PEP 723 内联元数据声明，`uv run` 首次运行自动安装。
